@@ -1,4 +1,6 @@
-﻿# 🌟 积分乐园 - 孩子学习劳动积分系统
+# 🌟 积分乐园 - 孩子学习劳动积分系统
+
+> 🌐 **在线访问**: https://shanshuimobai.github.io/jifenleyuan/
 
 一个运行在浏览器中的孩子学习积分管理应用，支持 **iPad / iPhone / 安卓平板**，无需安装任何软件。
 
@@ -13,7 +15,7 @@
 
 ## 🚀 使用
 
-1. 在浏览器打开 `积分乐园.html`
+1. 在浏览器打开 https://shanshuimobai.github.io/jifenleyuan/
 2. 输入孩子名字和 4 位家长密码
 3. 开始使用！
 
@@ -21,14 +23,14 @@
 
 用 Safari 打开 → 分享按钮 → 添加到主屏幕
 
-## 🛠 技术栈
-
-纯 HTML + CSS + JavaScript，单文件应用，数据存储在浏览器本地 localStorage。
-
 ## 📄 文件说明
 
 | 文件 | 说明 |
 |------|------|
-| `积分乐园.html` | 主应用（打开这个） |
-| `index.html` | 同上（备份） |
-| `qrcode.png` | 项目二维码 |
+| 积分乐园.html | 主应用（打开这个） |
+| index.html | 同上（备份） |
+| qrcode.png | 项目二维码 |
+
+## 🖥 本地使用
+
+直接在浏览器打开 积分乐园.html 即可，数据存储在浏览器的 localStorage 中。
