@@ -1,42 +1,30 @@
-﻿const express = require("express");
+const express = require("express");
 const cors = require("cors");
-const Database = require("better-sqlite3");
 const { v4: uuidv4 } = require("uuid");
+const fs = require("fs");
 const path = require("path");
 
-const app = express()
-const path_option = path;
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// 初始化数据库
-const db = new Database(path.join(__dirname, "data.db"));
-db.pragma("journal_mode = WAL");
+// 用文件存储代替数据库
+const DATA_FILE = path.join(__dirname, "data.json");
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    friendCode TEXT UNIQUE NOT NULL,
-    points INTEGER DEFAULT 0,
-    lastSync TEXT DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE TABLE IF NOT EXISTS friends (
-    userId TEXT NOT NULL,
-    friendId TEXT NOT NULL,
-    PRIMARY KEY (userId, friendId)
-  );
-  CREATE TABLE IF NOT EXISTS task_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId TEXT NOT NULL,
-    taskName TEXT NOT NULL,
-    points INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    createdAt TEXT DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+function loadData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+    }
+  } catch (e) {}
+  return { users: {}, friends: {} };
+}
+
+function saveData(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
 
 function genCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -45,22 +33,28 @@ function genCode() {
   return code;
 }
 
-// ===== API =====
-
 // 注册新用户
 app.post("/api/register", (req, res) => {
   try {
     const { name } = req.body;
-    if (!name || name.length > 20) return res.status(400).json({ error: "请输入名字（≤20字）" });
+    if (!name || name.length > 20) return res.status(400).json({ error: "请输入名字" });
+    
+    const data = loadData();
     const id = uuidv4().slice(0, 8);
+    
     let code;
-    // 确保好友码不重复
     for (let i = 0; i < 10; i++) {
       code = genCode();
-      const exist = db.prepare("SELECT id FROM users WHERE friendCode = ?").get(code);
-      if (!exist) break;
+      let exists = false;
+      for (const uid in data.users) {
+        if (data.users[uid].friendCode === code) { exists = true; break; }
+      }
+      if (!exists) break;
     }
-    db.prepare("INSERT INTO users (id, name, friendCode) VALUES (?, ?, ?)").run(id, name, code);
+    
+    data.users[id] = { name, friendCode: code, points: 0, lastSync: new Date().toISOString() };
+    saveData(data);
+    
     res.json({ userId: id, friendCode: code, name, points: 0 });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -69,38 +63,32 @@ app.post("/api/register", (req, res) => {
 
 // 通过好友码查找用户
 app.get("/api/user/:code", (req, res) => {
-  const user = db.prepare("SELECT id, name, friendCode, points FROM users WHERE friendCode = ?").get(req.params.code);
-  if (!user) return res.status(404).json({ error: "未找到该好友码" });
-  res.json(user);
+  const data = loadData();
+  for (const id in data.users) {
+    if (data.users[id].friendCode === req.params.code) {
+      return res.json({ id, name: data.users[id].name, friendCode: data.users[id].friendCode, points: data.users[id].points });
+    }
+  }
+  res.status(404).json({ error: "未找到该好友码" });
 });
 
 // 获取自己的信息
 app.get("/api/me/:userId", (req, res) => {
-  const user = db.prepare("SELECT id, name, friendCode, points FROM users WHERE id = ?").get(req.params.userId);
+  const data = loadData();
+  const user = data.users[req.params.userId];
   if (!user) return res.status(404).json({ error: "用户不存在" });
-  res.json(user);
+  res.json({ id: req.params.userId, name: user.name, friendCode: user.friendCode, points: user.points });
 });
 
 // 同步积分
 app.post("/api/sync", (req, res) => {
   try {
-    const { userId, points, tasks } = req.body;
-    const user = db.prepare("SELECT id FROM users WHERE id = ?").get(userId);
-    if (!user) return res.status(404).json({ error: "用户不存在" });
-
-    db.prepare("UPDATE users SET points = ?, lastSync = CURRENT_TIMESTAMP WHERE id = ?").run(points, userId);
-
-    // 记录今天完成的任务
-    if (tasks && Array.isArray(tasks)) {
-      const today = new Date().toISOString().slice(0, 10);
-      for (const t of tasks) {
-        const exist = db.prepare("SELECT id FROM task_log WHERE userId = ? AND taskName = ? AND date = ?").get(userId, t.name, today);
-        if (!exist) {
-          db.prepare("INSERT INTO task_log (userId, taskName, points, date) VALUES (?, ?, ?, ?)").run(userId, t.name, t.points, today);
-        }
-      }
-    }
-
+    const { userId, points } = req.body;
+    const data = loadData();
+    if (!data.users[userId]) return res.status(404).json({ error: "用户不存在" });
+    data.users[userId].points = points;
+    data.users[userId].lastSync = new Date().toISOString();
+    saveData(data);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -111,15 +99,22 @@ app.post("/api/sync", (req, res) => {
 app.post("/api/friend/add", (req, res) => {
   try {
     const { userId, friendCode } = req.body;
-    const friend = db.prepare("SELECT id, name, friendCode, points FROM users WHERE friendCode = ?").get(friendCode);
-    if (!friend) return res.status(404).json({ error: "好友码不存在" });
-    if (friend.id === userId) return res.status(400).json({ error: "不能添加自己" });
-
-    const exist = db.prepare("SELECT userId FROM friends WHERE userId = ? AND friendId = ?").get(userId, friend.id);
-    if (exist) return res.status(400).json({ error: "已经是好友了" });
-
-    db.prepare("INSERT INTO friends (userId, friendId) VALUES (?, ?)").run(userId, friend.id);
-    res.json({ friend });
+    const data = loadData();
+    
+    let friendId = null;
+    for (const id in data.users) {
+      if (data.users[id].friendCode === friendCode) { friendId = id; break; }
+    }
+    if (!friendId) return res.status(404).json({ error: "好友码不存在" });
+    if (friendId === userId) return res.status(400).json({ error: "不能添加自己" });
+    
+    if (!data.friends[userId]) data.friends[userId] = [];
+    if (data.friends[userId].includes(friendId)) return res.status(400).json({ error: "已经是好友了" });
+    
+    data.friends[userId].push(friendId);
+    saveData(data);
+    
+    res.json({ friend: data.users[friendId] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -128,23 +123,18 @@ app.post("/api/friend/add", (req, res) => {
 // 获取好友列表 + 排行榜
 app.get("/api/leaderboard/:userId", (req, res) => {
   try {
-    const userId = req.params.userId;
-    // 当前用户
-    const me = db.prepare("SELECT id, name, friendCode, points FROM users WHERE id = ?").get(userId);
+    const data = loadData();
+    const me = data.users[req.params.userId];
     if (!me) return res.status(404).json({ error: "用户不存在" });
-
-    // 好友列表
-    const friends = db.prepare(`
-      SELECT u.id, u.name, u.friendCode, u.points FROM friends f
-      JOIN users u ON u.id = f.friendId
-      WHERE f.userId = ?
-    `).all(userId);
-
-    // 排行榜（自己 + 好友）
-    const all = [me, ...friends];
+    
+    const friendsList = (data.friends[req.params.userId] || []).map(id => data.users[id]).filter(Boolean);
+    const all = [{ id: req.params.userId, ...me }, ...friendsList.map(f => ({ id: f.friendCode, ...f }))];
     all.sort((a, b) => b.points - a.points);
-
-    res.json({ me, friends, leaderboard: all });
+    
+    // 重新整理格式
+    const leaderboard = all.map(u => ({ id: u.id, name: u.name, friendCode: u.friendCode, points: u.points }));
+    
+    res.json({ me: leaderboard[0], friends: friendsList, leaderboard });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -154,14 +144,18 @@ app.get("/api/leaderboard/:userId", (req, res) => {
 app.post("/api/friend/remove", (req, res) => {
   try {
     const { userId, friendId } = req.body;
-    db.prepare("DELETE FROM friends WHERE userId = ? AND friendId = ?").run(userId, friendId);
+    const data = loadData();
+    if (data.friends[userId]) {
+      data.friends[userId] = data.friends[userId].filter(id => id !== friendId);
+      saveData(data);
+    }
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-app.listen(PORT, () => console.log("积分乐园API运行在端口 " + PORT));
-
 // 服务静态文件（HTML）
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, "..")));
+
+app.listen(PORT, () => console.log("积分乐园API运行在端口 " + PORT));
