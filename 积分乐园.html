@@ -301,7 +301,7 @@ function sRN(){let n=document.getElementById('rnI').value.trim()||'宝宝';S.cn=
 function confirmReset(){if(!confirm('⚠️ 重置所有数据？不可恢复！'))return;if(!confirm('再次确认？'))return;S.pts=0;S.tasks=JSON.parse(JSON.stringify(DT));S.rewards=JSON.parse(JSON.stringify(DR));S.hist=[];S.tc=9;S.rc=7;S.strk=0;S.ld=null;S.tomato={dur:25,rem:0,run:false,end:null,cnt:0};ss();rA();alert('✅ 已重置！')}
 
 // ===== 好友排行榜 =====
-const BK = "https://jifenleyuan-production.up.railway.app";
+const BK = "https://jifenleyuan-productions.up.railway.app";
 
 function reg(){
   let n = S.cn || "宝宝";
