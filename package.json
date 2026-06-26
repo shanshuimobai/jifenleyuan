@@ -1,0 +1,8 @@
+{
+  "name": "jifenleyuan",
+  "version": "1.0.0",
+  "description": "积分乐园 - 孩子学习劳动积分系统",
+  "scripts": {
+    "start": "cd backend && node index.js"
+  }
+}
