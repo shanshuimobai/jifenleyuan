@@ -259,7 +259,7 @@ function ss(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
 function initSetup(){let n=document.getElementById('sn').value.trim()||'宝宝';let p=document.getElementById('spi').value.trim();if(!p||p.length!=4||!/^\d{4}$/.test(p)){alert('请输入4位数字密码哦！');return}S=ds(n,p);ss();goM()}
 function goM(){document.getElementById('sp').classList.remove('show');document.getElementById('sp').style.display='none';document.getElementById('ma').style.display='flex';rA();resumeT()}
 function initApp(){let s=ls();if(s){S=s;goM()}else{document.getElementById('sp').classList.add('show');document.getElementById('sp').style.display='flex'}}
-function sw(pid,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(pid).classList.add('active');document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));if(btn)btn.classList.add('active');document.getElementById('pc').scrollTop=0;if(pid=='ph')rH();else if(pid=='pt')rT();else if(pid=='pr')rR();else if(pid=='phist')rHi();else if(pid=='pset')rS()}
+function sw(pid,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(pid).classList.add('active');document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));if(btn)btn.classList.add('active');document.getElementById('pc').scrollTop=0;if(pid=='ph')rH();else if(pid=='pt')rT();else if(pid=='pr')rR();else if(pid=='phist')rHi();else if(pid=='pf')rF();else if(pid=='pset')rS()}
 let pCb=null,pB='';
 function reqPin(cb){pCb=cb;pB='';upD();document.getElementById('pe').textContent='';document.getElementById('po').classList.add('open')}
 function pi(k){if(k=='cancel'){document.getElementById('po').classList.remove('open');pCb=null;pB='';return}if(k=='clr'){pB=pB.slice(0,-1);upD();document.getElementById('pe').textContent=''}else if(pB.length<4){pB+=k;upD()}if(pB.length==4){if(pB===S.pp){document.getElementById('po').classList.remove('open');let cb=pCb;pCb=null;pB='';if(cb)cb()}else{document.getElementById('pe').textContent='❌ 密码错误';pB='';setTimeout(()=>upD(),300)}}}
@@ -297,6 +297,58 @@ function delR(i){if(!confirm('删除「'+S.rewards[i].n+'」？'))return;S.rewar
 function openRN(){sM('<div style="text-align:center;font-size:36px;margin-bottom:4px">✏️</div><div class="mt">修改名字</div><div class="fg"><label>新名字</label><input id="rnI" value="'+S.cn+'" maxlength="10"></div><div class="ma"><button class="btn btn-o" onclick="clM()">取消</button><button class="btn btn-p" onclick="sRN()">保存</button></div>')}
 function sRN(){let n=document.getElementById('rnI').value.trim()||'宝宝';S.cn=n;ss();clM();rA()}
 function confirmReset(){if(!confirm('⚠️ 重置所有数据？不可恢复！'))return;if(!confirm('再次确认？'))return;S.pts=0;S.tasks=JSON.parse(JSON.stringify(DT));S.rewards=JSON.parse(JSON.stringify(DR));S.hist=[];S.tc=9;S.rc=7;S.strk=0;S.ld=null;S.tomato={dur:25,rem:0,run:false,end:null,cnt:0};ss();rA();alert('✅ 已重置！')}
+
+// ===== 好友排行榜 =====
+const BK = "https://jifenleyuan-production.up.railway.app";
+
+function reg(){
+  let n = S.cn || "宝宝";
+  fetch(BK+"/api/register", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})})
+  .then(r=>r.json()).then(d=>{
+    S.uid = d.userId; S.fc = d.friendCode; ss(); rF();
+  }).catch(()=>alert("注册失败，服务器未就绪"));
+}
+
+function addF(){
+  let code = document.getElementById("fcInput").value.trim().toUpperCase();
+  if(!code||code.length!==6) return alert("请输入6位好友码");
+  fetch(BK+"/api/friend/add", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:S.uid,friendCode:code})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error) return alert(d.error);
+    alert("✅ 添加好友成功！"); refLb();
+  }).catch(()=>alert("添加失败"));
+}
+
+function refLb(){
+  if(!S.uid) return;
+  fetch(BK+"/api/leaderboard/"+S.uid).then(r=>r.json()).then(d=>{
+    let html = d.leaderboard.map((u,i)=>{
+      let medal = ["🥇","🥈","🥉"][i] || i+1;
+      let me = u.id===S.uid ? " (我)" : "";
+      return `<div class="hi"><div class="hii">${medal}</div><div class="hif"><div class="hn">${u.name}${me}</div><div class="ht">好友码: ${u.friendCode}</div></div><div class="hp e">🪙 ${u.points}</div></div>`;
+    }).join("");
+    document.getElementById("lbList").innerHTML = html || "<div class='es'><div>还没有好友哦</div></div>";
+  }).catch(()=>{});
+}
+
+function sync(){
+  if(!S.uid) return;
+  fetch(BK+"/api/sync", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:S.uid,points:S.pts})}).then(()=>{
+    refLb(); alert("✅ 积分已同步");
+  }).catch(()=>{});
+}
+
+function rF(){
+  let elms = ["pfReg","pfCode","pfLb","syncBtn"];
+  if(!S.uid||!S.fc){
+    elms.forEach(id=>document.getElementById(id).style.display="none");
+    document.getElementById("pfReg").style.display="block";
+    return;
+  }
+  elms.forEach(id=>document.getElementById(id).style.display= id==="pfReg"?"none":"block");
+  document.getElementById("myCode").textContent = S.fc;
+  refLb();
+}
 function showC(ic,tt,ds,ps){document.getElementById('ci').textContent=ic;document.getElementById('ct').textContent=tt;document.getElementById('cd').textContent=ds;document.getElementById('cp').textContent=ps;document.getElementById('co').classList.add('open')}
 function clC(){document.getElementById('co').classList.remove('open')}
 function sM(h){document.getElementById('mc').innerHTML=h;document.getElementById('mo').classList.add('open')}
