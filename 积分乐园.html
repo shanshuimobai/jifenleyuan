@@ -185,6 +185,38 @@ input:focus{border-color:var(--p);background:#fff}
 <div class="es" id="re" style="display:none"><div class="esi">🎁</div><div>还没有奖励哦，让爸爸妈妈添加吧！</div></div>
 </div>
 <div class="page" id="phist"><div class="hl" id="hl"></div><div class="es" id="he" style="display:none"><div class="esi">📜</div><div>还没有记录，快去完成任务吧！</div></div></div>
+<div class="page" id="pf">
+<div id="pfMain">
+  <div id="pfCode" style="display:none">
+    <div style="background:linear-gradient(135deg,#E8F8F5,#D4EFDF);border-radius:var(--rs);padding:16px;margin-bottom:14px;text-align:center">
+      <div style="font-size:14px;color:var(--t2)">👥 我的好友码</div>
+      <div style="font-size:36px;font-weight:900;color:var(--p);letter-spacing:6px;margin:6px 0" id="myCode">------</div>
+      <div style="font-size:13px;color:var(--t2)">分享给家人，互加好友看排行榜</div>
+    </div>
+    <div class="card" style="padding:14px 18px">
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="text" id="fcInput" placeholder="输入对方好友码" maxlength="6" style="flex:1;text-align:center;font-size:18px;letter-spacing:4px;text-transform:uppercase">
+        <button class="btn btn-p" onclick="addF()" style="flex-shrink:0">➕ 添加</button>
+      </div>
+    </div>
+  </div>
+  <div id="pfReg" style="text-align:center;padding:40px 20px">
+    <div style="font-size:48px;margin-bottom:12px">👥</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:8px">开启好友排行榜</div>
+    <div style="font-size:14px;color:var(--t2);margin-bottom:16px">注册后可与家人互看积分</div>
+    <button class="btn btn-p" onclick="reg()">🚀 注册并开启</button>
+  </div>
+  <div id="pfLb" style="display:none;margin-top:8px">
+    <div style="font-size:15px;font-weight:700;color:var(--t2);margin-bottom:8px">🏆 积分排行榜</div>
+    <div id="lbList"></div>
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn btn-s btn-sm" onclick="refLb()">🔄 刷新</button>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:10px;display:none" id="syncBtn">
+    <button class="btn btn-o btn-sm" onclick="sync()">📤 同步积分</button>
+  </div>
+</div></div>
 <div class="page" id="pset">
 <div class="ss"><div class="st">📋 任务管理</div><button class="btn btn-s bw" onclick="openTM()" style="margin-bottom:8px">➕ 添加任务</button><div id="etl"></div><div class="es" id="ete" style="display:none;padding:16px"><div style="font-size:14px;color:var(--t2)">还没有任务</div></div></div>
 <div class="ss"><div class="st">🎁 奖励管理</div><button class="btn btn-s bw" onclick="openRM()" style="margin-bottom:8px">➕ 添加奖励</button><div id="erl"></div><div class="es" id="ere" style="display:none;padding:16px"><div style="font-size:14px;color:var(--t2)">还没有奖励</div></div></div>
